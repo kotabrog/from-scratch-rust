@@ -1,0 +1,25 @@
+# Rust / Cargo
+target/
+debug/
+**/target/
+
+# rustfmt backups
+**/*.rs.bk
+
+# Cargo.lock は通常は追跡（バイナリ向け）。
+# ライブラリのみのリポジトリにしたい場合は以下を有効化:
+# Cargo.lock
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Coverage / profiling
+coverage/
+*.profraw
+*.profdata
+

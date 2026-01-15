@@ -1,0 +1,3 @@
+[workspace]
+members = ["kmath"]
+resolver = "2"
