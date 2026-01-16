@@ -15,9 +15,20 @@ pub type Aabb2 = Rect;
 impl Rect {
     /// Constructs a rect from arbitrary min/max; order is normalized internally.
     pub fn from_min_max(min: Vec2, max: Vec2) -> Self {
-        let (minx, maxx) = if min.x <= max.x { (min.x, max.x) } else { (max.x, min.x) };
-        let (miny, maxy) = if min.y <= max.y { (min.y, max.y) } else { (max.y, min.y) };
-        Self { min: Vec2::new(minx, miny), max: Vec2::new(maxx, maxy) }
+        let (minx, maxx) = if min.x <= max.x {
+            (min.x, max.x)
+        } else {
+            (max.x, min.x)
+        };
+        let (miny, maxy) = if min.y <= max.y {
+            (min.y, max.y)
+        } else {
+            (max.y, min.y)
+        };
+        Self {
+            min: Vec2::new(minx, miny),
+            max: Vec2::new(maxx, maxy),
+        }
     }
 
     /// Constructs a rect from origin (min) and size; negative sizes are normalized.
@@ -27,24 +38,40 @@ impl Rect {
     }
 
     /// Inclusive minimum corner.
-    pub fn min(&self) -> Vec2 { self.min }
+    pub fn min(&self) -> Vec2 {
+        self.min
+    }
     /// Exclusive maximum corner.
-    pub fn max(&self) -> Vec2 { self.max }
+    pub fn max(&self) -> Vec2 {
+        self.max
+    }
 
     /// Origin equals min.
-    pub fn origin(&self) -> Vec2 { self.min }
+    pub fn origin(&self) -> Vec2 {
+        self.min
+    }
 
     /// Size vector (width, height). Zero for empty along an axis.
-    pub fn size(&self) -> Vec2 { self.max - self.min }
+    pub fn size(&self) -> Vec2 {
+        self.max - self.min
+    }
 
-    pub fn width(&self) -> f32 { self.max.x - self.min.x }
-    pub fn height(&self) -> f32 { self.max.y - self.min.y }
+    pub fn width(&self) -> f32 {
+        self.max.x - self.min.x
+    }
+    pub fn height(&self) -> f32 {
+        self.max.y - self.min.y
+    }
 
     /// Geometric center ((min+max)/2). For empty edges, lies at the midpoint.
-    pub fn center(&self) -> Vec2 { (self.min + self.max) * 0.5 }
+    pub fn center(&self) -> Vec2 {
+        (self.min + self.max) * 0.5
+    }
 
     /// Returns true if the rect is empty in any dimension (non-positive extent).
-    pub fn is_empty(&self) -> bool { self.width() <= 0.0 || self.height() <= 0.0 }
+    pub fn is_empty(&self) -> bool {
+        self.width() <= 0.0 || self.height() <= 0.0
+    }
 
     /// Half-open contains: includes min edge, excludes max edge.
     pub fn contains_point(&self, p: Vec2) -> bool {
@@ -53,8 +80,10 @@ impl Rect {
 
     /// Returns true if `other` is fully contained within this rect (half-open policy).
     pub fn contains_rect(&self, other: Rect) -> bool {
-        other.min.x >= self.min.x && other.max.x <= self.max.x &&
-        other.min.y >= self.min.y && other.max.y <= self.max.y
+        other.min.x >= self.min.x
+            && other.max.x <= self.max.x
+            && other.min.y >= self.min.y
+            && other.max.y <= self.max.y
     }
 
     /// Half-open intersection: touching only at edges/corners is not considered intersection.
