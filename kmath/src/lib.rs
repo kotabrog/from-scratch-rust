@@ -1,14 +1,11 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+pub mod mat3;
+pub mod num;
+pub mod rect;
+pub mod transform2d;
+pub mod vec;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+pub use mat3::Mat3;
+pub use num::*;
+pub use rect::{Aabb2, Rect};
+pub use transform2d::Transform2D;
+pub use vec::{Vec2, Vec3};
