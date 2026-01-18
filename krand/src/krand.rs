@@ -67,6 +67,23 @@ mod tests {
     use super::*;
 
     #[test]
+    fn next_u32_reproducible_first_values() {
+        let mut a = Krand::new(123);
+        let mut b = Krand::new(123);
+        for _ in 0..8 {
+            assert_eq!(a.next_u32(), b.next_u32());
+        }
+    }
+
+    #[test]
+    fn next_u32_progresses() {
+        let mut rng = Krand::new(987654321);
+        let v1 = rng.next_u32();
+        let v2 = rng.next_u32();
+        assert_ne!(v1, v2);
+    }
+
+    #[test]
     fn next_f32_in_unit_interval() {
         let mut rng = Krand::new(42);
         for _ in 0..10_000 {
