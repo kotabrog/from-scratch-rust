@@ -5,7 +5,10 @@ use krand::Krand;
 fn main() {
     // Parse args: N and seed (optional)
     let args: Vec<String> = env::args().collect();
-    let n: usize = args.get(1).and_then(|s| s.parse().ok()).unwrap_or(1_000_000);
+    let n: usize = args
+        .get(1)
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(1_000_000);
     let seed: u64 = args.get(2).and_then(|s| s.parse().ok()).unwrap_or(123);
 
     let mut rng = Krand::new(seed);
@@ -28,4 +31,3 @@ fn main() {
     println!("var  ≈ {:.6}", var);
     println!("theory: mean=0.5, var=1/12≈0.083333");
 }
-
