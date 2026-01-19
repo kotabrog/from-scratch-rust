@@ -3,6 +3,10 @@
 version = 4
 
 [[package]]
+name = "kid"
+version = "0.1.0"
+
+[[package]]
 name = "kmath"
 version = "0.1.0"
 
