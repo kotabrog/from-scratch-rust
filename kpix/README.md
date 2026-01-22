@@ -13,6 +13,8 @@
 - `Surface::clear(color)` / `Surface::set_pixel(x,y,color)`
 - `io::write_ppm(&surface, path)`（P6形式、alphaは無視）
  - `draw::draw_line(x0,y0,x1,y1,color)`（Bresenham, 端点含む。クリップは`set_pixel`依存）
+ - `draw::draw_rect(x,y,w,h,color)`（半開領域 [x,x+w)×[y,y+h) の外周。w,h は負でも可）
+ - `draw::fill_rect(x,y,w,h,color)`（半開領域 [x,x+w)×[y,y+h) を塗りつぶし。w,h は負でも可）
 
 ## 例（グラデーション）
 ```bash

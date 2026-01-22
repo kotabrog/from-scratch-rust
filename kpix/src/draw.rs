@@ -38,6 +38,43 @@ pub fn draw_line(surface: &mut Surface, mut x0: i32, mut y0: i32, x1: i32, y1: i
     }
 }
 
+/// Draw rectangle outline. `(x, y)` is a corner; `w`, `h` may be negative.
+/// Uses half-open semantics: draws the border of [x0, x1) x [y0, y1).
+pub fn draw_rect(surface: &mut Surface, x: i32, y: i32, w: i32, h: i32, color: Color) {
+    if w == 0 || h == 0 {
+        return;
+    }
+    let (x0, x1) = if w >= 0 { (x, x + w) } else { (x + w, x) };
+    let (y0, y1) = if h >= 0 { (y, y + h) } else { (y + h, y) };
+    if x0 >= x1 || y0 >= y1 {
+        return;
+    }
+    // top and bottom (inclusive endpoints)
+    draw_line(surface, x0, y0, x1 - 1, y0, color);
+    draw_line(surface, x0, y1 - 1, x1 - 1, y1 - 1, color);
+    // left and right
+    draw_line(surface, x0, y0, x0, y1 - 1, color);
+    draw_line(surface, x1 - 1, y0, x1 - 1, y1 - 1, color);
+}
+
+/// Fill rectangle area. `(x, y)` is a corner; `w`, `h` may be negative.
+/// Fills all pixels within half-open region [x0, x1) x [y0, y1), with clipping.
+pub fn fill_rect(surface: &mut Surface, x: i32, y: i32, w: i32, h: i32, color: Color) {
+    if w == 0 || h == 0 {
+        return;
+    }
+    let (x0, x1) = if w >= 0 { (x, x + w) } else { (x + w, x) };
+    let (y0, y1) = if h >= 0 { (y, y + h) } else { (y + h, y) };
+    if x0 >= x1 || y0 >= y1 {
+        return;
+    }
+    for yy in y0..y1 {
+        for xx in x0..x1 {
+            surface.set_pixel(xx, yy, color);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -121,6 +158,59 @@ mod tests {
         super::draw_line(&mut s, -2, 1, 6, 1, c);
         for x in 0..5 {
             assert_eq!(s.get_pixel(x, 1), Some(c));
+        }
+    }
+
+    #[test]
+    fn rect_outline_basic() {
+        let mut s = Surface::new(5, 5);
+        let c = Color::rgba(10, 20, 30, 255);
+        super::draw_rect(&mut s, 1, 1, 3, 3, c); // covers x=[1,3], y=[1,3] edges
+        // corners
+        for (x, y) in [(1, 1), (3, 1), (1, 3), (3, 3)] {
+            assert_eq!(s.get_pixel(x, y), Some(c));
+        }
+        // inside remains default
+        assert_eq!(s.get_pixel(2, 2), Some(Color::from_u32(0)));
+    }
+
+    #[test]
+    fn rect_fill_basic_and_area() {
+        let mut s = Surface::new(6, 4);
+        let c = Color::rgba(200, 50, 50, 255);
+        super::fill_rect(&mut s, 1, 1, 3, 2, c); // x:[1,4), y:[1,3)
+        // count filled pixels
+        let mut cnt = 0;
+        for y in 0..4 {
+            for x in 0..6 {
+                if s.get_pixel(x, y) == Some(c) {
+                    cnt += 1;
+                }
+            }
+        }
+        assert_eq!(cnt, 3 * 2);
+    }
+
+    #[test]
+    fn rect_negative_size_normalizes() {
+        let mut a = Surface::new(6, 4);
+        let mut b = Surface::new(6, 4);
+        let c = Color::rgba(0, 200, 0, 255);
+        super::fill_rect(&mut a, 4, 3, -3, -2, c);
+        super::fill_rect(&mut b, 1, 1, 3, 2, c);
+        assert_eq!(a.pixels(), b.pixels());
+    }
+
+    #[test]
+    fn rect_clip_out_of_bounds() {
+        let mut s = Surface::new(4, 3);
+        let c = Color::rgba(50, 50, 200, 255);
+        super::fill_rect(&mut s, -2, -1, 6, 4, c); // spans beyond all sides; half-open covers full surface
+        // Visible region should be filled entirely
+        for y in 0..3 {
+            for x in 0..4 {
+                assert_eq!(s.get_pixel(x, y), Some(c));
+            }
         }
     }
 }

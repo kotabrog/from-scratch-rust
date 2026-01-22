@@ -34,5 +34,14 @@ fn main() {
         kpix::draw::draw_line(&mut s, cx, cy, x, y, star);
     }
 
+    // Rectangles: outlines and filled
+    let outline = Color::rgba(200, 80, 80, 255);
+    let fill = Color::rgba(80, 160, 200, 255);
+    kpix::draw::draw_rect(&mut s, 20, 20, 60, 40, outline);
+    kpix::draw::fill_rect(&mut s, 24, 24, 52, 32, fill);
+    // Negative size normalization
+    kpix::draw::draw_rect(&mut s, 200, 200, -40, -30, outline);
+    kpix::draw::fill_rect(&mut s, 196, 196, -32, -22, fill);
+
     io::write_ppm(&s, "shapes.ppm").expect("failed to write PPM");
 }
