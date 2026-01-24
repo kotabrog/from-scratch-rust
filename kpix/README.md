@@ -1,28 +1,26 @@
 # kpix
 
-最小構成のピクセル描画ライブラリ。CPU上のピクセルバッファに基本図形を描き、まずは **PPM** で保存します（依存なし）。
+最小構成のピクセル描画ライブラリ。CPU上のピクセルバッファに基本図形を描き、PPMで保存。
 
-## 仕様と前提
+## できること（概要）
+- 低レベル: `Surface`/`Color` によるピクセルバッファ管理（RGBA を `u32` に格納）。
+- 描画: `clear` と `set_pixel`（クリップは暗黙）。
+- 線分: `draw::draw_line`（Bresenham、端点含む）。
+- 矩形: `draw::draw_rect`（外周）/`draw::fill_rect`（塗りつぶし）。負サイズ正規化・クリップ対応。
+- 円: `draw::draw_circle`（ミッドポイント法、`r=0` は中心のみ）。
+- 出力: `io::write_ppm` による PPM(P6) 保存（alpha は無視）。
+
+## 規約
 - 座標系: 原点は左上 `(0,0)`、xは右が正、yは下が正。
 - ピクセル表現: `u32` に little-endian の RGBA を格納（`u32::from_le_bytes([r,g,b,a])`）。
 - 範囲外アクセス: `set_pixel` はクリップ（何もしない）。
 
-## 主なAPI
-- `Color { r,g,b,a }` と `Color::rgba(r,g,b,a)`
-- `Surface::new(w,h)` / `width()` / `height()`
-- `Surface::clear(color)` / `Surface::set_pixel(x,y,color)`
-- `io::write_ppm(&surface, path)`（P6形式、alphaは無視）
- - `draw::draw_line(x0,y0,x1,y1,color)`（Bresenham, 端点含む。クリップは`set_pixel`依存）
- - `draw::draw_rect(x,y,w,h,color)`（半開領域 [x,x+w)×[y,y+h) の外周。w,h は負でも可）
- - `draw::fill_rect(x,y,w,h,color)`（半開領域 [x,x+w)×[y,y+h) を塗りつぶし。w,h は負でも可）
- - `draw::draw_circle(cx,cy,r,color)`（ミッドポイント法。r=0は中心のみ）
+## サンプル
 
-## 例（グラデーション）
-```bash
-cargo run -p kpix --example gradient -- gradient.ppm
-```
-`examples/gradient.rs` は 256x256 のグラデーションを生成し、PPM で保存します。
+### グラデーション
+- 実行: `cargo run -p kpix --example gradient -- gradient.ppm`
+- 出力: 256x256 のグラデーション画像（PPM P6, RGB。alpha は無視）
 
-## 今後の拡張（予定）
-- PNG出力（依存を許容する場合）
-- `blend_pixel`（straight alpha: src-over）
+### 図形（線・矩形・円）
+- 実行: `cargo run -p kpix --example shapes`
+- 出力: `shapes.ppm`（グリッド＋スター状の線／矩形の枠と塗りつぶし／同心円）
