@@ -75,6 +75,42 @@ pub fn fill_rect(surface: &mut Surface, x: i32, y: i32, w: i32, h: i32, color: C
     }
 }
 
+/// Draw a circle outline centered at (cx, cy) with integer radius `r` (r >= 0).
+/// Uses the Midpoint Circle Algorithm. Clipping is delegated to `set_pixel`.
+pub fn draw_circle(surface: &mut Surface, cx: i32, cy: i32, r: i32, color: Color) {
+    if r < 0 {
+        return;
+    }
+    if r == 0 {
+        surface.set_pixel(cx, cy, color);
+        return;
+    }
+
+    let mut x = r;
+    let mut y = 0;
+    let mut d = 1 - r; // decision parameter
+
+    while y <= x {
+        // 8-way symmetry
+        surface.set_pixel(cx + x, cy + y, color);
+        surface.set_pixel(cx - x, cy + y, color);
+        surface.set_pixel(cx + x, cy - y, color);
+        surface.set_pixel(cx - x, cy - y, color);
+        surface.set_pixel(cx + y, cy + x, color);
+        surface.set_pixel(cx - y, cy + x, color);
+        surface.set_pixel(cx + y, cy - x, color);
+        surface.set_pixel(cx - y, cy - x, color);
+
+        y += 1;
+        if d <= 0 {
+            d += 2 * y + 1;
+        } else {
+            x -= 1;
+            d += 2 * (y - x) + 1;
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -212,5 +248,36 @@ mod tests {
                 assert_eq!(s.get_pixel(x, y), Some(c));
             }
         }
+    }
+
+    #[test]
+    fn circle_radius_zero_sets_center() {
+        let mut s = Surface::new(5, 5);
+        let c = Color::rgba(100, 100, 100, 255);
+        super::draw_circle(&mut s, 2, 2, 0, c);
+        assert_eq!(s.get_pixel(2, 2), Some(c));
+    }
+
+    #[test]
+    fn circle_cardinals_for_small_radius() {
+        let mut s = Surface::new(7, 7);
+        let c = Color::rgba(10, 200, 10, 255);
+        super::draw_circle(&mut s, 3, 3, 2, c);
+        // Cardinal points at distance r should be drawn
+        assert_eq!(s.get_pixel(3 + 2, 3), Some(c));
+        assert_eq!(s.get_pixel(3 - 2, 3), Some(c));
+        assert_eq!(s.get_pixel(3, 3 + 2), Some(c));
+        assert_eq!(s.get_pixel(3, 3 - 2), Some(c));
+    }
+
+    #[test]
+    fn circle_symmetry_and_clipping() {
+        let mut s = Surface::new(5, 5);
+        let c = Color::rgba(200, 10, 10, 255);
+        // Partially out-of-bounds: should not panic and visible points should appear
+        super::draw_circle(&mut s, 0, 0, 3, c);
+        // Expect some visible pixels near the top-left corner
+        assert_eq!(s.get_pixel(0, 3), Some(c));
+        assert_eq!(s.get_pixel(3, 0), Some(c));
     }
 }

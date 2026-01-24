@@ -43,5 +43,13 @@ fn main() {
     kpix::draw::draw_rect(&mut s, 200, 200, -40, -30, outline);
     kpix::draw::fill_rect(&mut s, 196, 196, -32, -22, fill);
 
+    // Circles: concentric rings
+    let ring1 = Color::rgba(240, 120, 120, 255);
+    let ring2 = Color::rgba(120, 240, 120, 255);
+    let ring3 = Color::rgba(120, 120, 240, 255);
+    for (i, col) in [(24, ring1), (40, ring2), (56, ring3)] {
+        kpix::draw::draw_circle(&mut s, cx, cy, i, col);
+    }
+
     io::write_ppm(&s, "shapes.ppm").expect("failed to write PPM");
 }
