@@ -52,4 +52,5 @@ fn main() {
     }
 
     io::write_ppm(&s, "shapes.ppm").expect("failed to write PPM");
+    io::write_bmp(&s, "shapes.bmp").expect("failed to write BMP");
 }

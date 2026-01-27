@@ -7,12 +7,19 @@ name = "kid"
 version = "0.1.0"
 
 [[package]]
+name = "kimgfmt"
+version = "0.1.0"
+
+[[package]]
 name = "kmath"
 version = "0.1.0"
 
 [[package]]
 name = "kpix"
 version = "0.1.0"
+dependencies = [
+ "kimgfmt",
+]
 
 [[package]]
 name = "krand"

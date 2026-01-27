@@ -24,3 +24,4 @@ coverage/
 *.profdata
 
 *.ppm
+*.bmp
