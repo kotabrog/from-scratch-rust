@@ -2,6 +2,8 @@ use std::fs::File;
 use std::io::{self, BufWriter, Write};
 use std::path::Path;
 
+pub mod bmp;
+
 /// Write the given RGBA little-endian pixel buffer as binary PPM (P6).
 /// - `pixels`: slice of packed RGBA `u32` in little-endian order per pixel.
 /// - Layout: row-major, top-left origin, width x height.

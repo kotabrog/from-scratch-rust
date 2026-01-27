@@ -6,6 +6,9 @@
 - PPM(P6) 書き出し（RGBA8 リトルエンディアンの `u32` 配列から RGB を出力）
   - `write_ppm_from_rgba_le(pixels, width, height, path)`
   - `write_ppm_from_rgba_le_to_writer(pixels, width, height, writer)`
+- BMP(24-bit, BI_RGB) 書き出し（BGR順、行は4バイト境界にパディング、Top-Down）
+  - `bmp::write_bmp24_from_rgba_le(pixels, width, height, path)`
+  - `bmp::write_bmp24_from_rgba_le_to_writer(pixels, width, height, writer)`
 
 ピクセル契約:
 - 行優先（row-major）、原点は左上 `(0,0)`
@@ -26,7 +29,5 @@ write_ppm_from_rgba_le(&pixels, w, h, "out.ppm").unwrap();
 ```
 
 ## 今後の拡張
-- BMP(24-bit, BI_RGB) 書き出し（行パディング/BGR順対応）
 - `Options`（alpha の扱い、top-down/bottom-up など）
 - 読み込み（decode）は段階的に対応予定
-
