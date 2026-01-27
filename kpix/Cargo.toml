@@ -5,3 +5,5 @@ edition = "2024"
 
 [dependencies]
 
+# Delegate image saving to kimgfmt
+kimgfmt = { path = "../kimgfmt" }

@@ -1,35 +1,28 @@
-use std::fs::File;
-use std::io::{self, BufWriter, Write};
+use std::io::{self, Write};
 use std::path::Path;
 
-use crate::core::{Color, Surface};
+use crate::core::Surface;
 
 /// Write the surface as binary PPM (P6). Alpha is ignored.
-/// Layout: header "P6\n<width> <height>\n255\n" followed by width*height RGB bytes.
+/// Delegates to `kimgfmt` for encoding.
 pub fn write_ppm(surface: &Surface, path: impl AsRef<Path>) -> io::Result<()> {
-    let file = File::create(path)?;
-    let mut w = BufWriter::new(file);
-    write_ppm_to_writer(surface, &mut w)
+    kimgfmt::write_ppm_from_rgba_le(surface.pixels(), surface.width(), surface.height(), path)
 }
 
-/// Write PPM to any writer. Useful for testing.
+/// Write PPM to any writer. Useful for testing. Delegates to `kimgfmt`.
 pub fn write_ppm_to_writer(surface: &Surface, mut w: impl Write) -> io::Result<()> {
-    let width = surface.width();
-    let height = surface.height();
-    // Header
-    write!(w, "P6\n{} {}\n255\n", width, height)?;
-
-    // Payload: RGB per pixel, ignoring alpha
-    for &px in surface.pixels() {
-        let Color { r, g, b, .. } = Color::from_u32(px);
-        w.write_all(&[r, g, b])?;
-    }
-    Ok(())
+    kimgfmt::write_ppm_from_rgba_le_to_writer(
+        surface.pixels(),
+        surface.width(),
+        surface.height(),
+        &mut w,
+    )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Color;
 
     #[test]
     fn ppm_header_and_data() {
