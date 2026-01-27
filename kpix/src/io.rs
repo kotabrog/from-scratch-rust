@@ -6,12 +6,12 @@ use crate::core::Surface;
 /// Write the surface as binary PPM (P6). Alpha is ignored.
 /// Delegates to `kimgfmt` for encoding.
 pub fn write_ppm(surface: &Surface, path: impl AsRef<Path>) -> io::Result<()> {
-    kimgfmt::write_ppm_from_rgba_le(surface.pixels(), surface.width(), surface.height(), path)
+    kimgfmt::ppm::write_ppm_from_rgba_le(surface.pixels(), surface.width(), surface.height(), path)
 }
 
 /// Write PPM to any writer. Useful for testing. Delegates to `kimgfmt`.
 pub fn write_ppm_to_writer(surface: &Surface, mut w: impl Write) -> io::Result<()> {
-    kimgfmt::write_ppm_from_rgba_le_to_writer(
+    kimgfmt::ppm::write_ppm_from_rgba_le_to_writer(
         surface.pixels(),
         surface.width(),
         surface.height(),
