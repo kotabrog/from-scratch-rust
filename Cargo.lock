@@ -11,5 +11,9 @@ name = "kmath"
 version = "0.1.0"
 
 [[package]]
+name = "kpix"
+version = "0.1.0"
+
+[[package]]
 name = "krand"
 version = "0.1.0"
