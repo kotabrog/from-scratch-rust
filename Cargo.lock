@@ -24,3 +24,12 @@ dependencies = [
 [[package]]
 name = "krand"
 version = "0.1.0"
+
+[[package]]
+name = "kraster2d"
+version = "0.1.0"
+dependencies = [
+ "kimgfmt",
+ "kmath",
+ "kpix",
+]
