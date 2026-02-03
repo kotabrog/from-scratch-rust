@@ -4,3 +4,6 @@
 
 ### ソリッド
 - 実行: `cargo run -p kraster2d --example solid`
+
+### トライアングル
+- 実行: `cargo run -p kraster2d --example tri_solid`
