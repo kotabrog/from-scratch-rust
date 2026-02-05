@@ -7,3 +7,6 @@
 
 ### トライアングル
 - 実行: `cargo run -p kraster2d --example tri_solid`
+
+### テクスチャと回転
+- 実行: `cargo run -p kraster2d --example rotating_quad`
