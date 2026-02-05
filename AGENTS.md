@@ -32,3 +32,16 @@
   - テスト: `make test`
   - CI まとめ: `make ci`
 - GitHub Actions は `main` への Pull Request 時に `lint` と `test` を実行する。
+
+## 開発運用（examples の出力先）
+- 出力ディレクトリは `target/` 配下に統一する。
+  - 既定: `<CARGO_TARGET_DIR|./target>/examples/<example-name>/...`
+  - 例の生成物（PPM/BMP など）は上記ディレクトリに吐き出すこと。
+- 生成物をリポジトリ直下に置かない（`.gitignore` 管理外の散乱防止）。
+- 解決ヘルパ: `kdev` クレートの `kdev::out::example_output_dir("<example>")` を利用する。
+  - `CARGO_TARGET_DIR` が設定されていればそれを尊重、未設定なら `./target` を使用。
+  - 各クレートの examples から利用する場合は、`kdev` を通常依存ではなく **dev-dependencies** として追加する。
+    - 例）`[dev-dependencies] kdev = { path = "../kdev" }`
+  - 典型コード:
+    - `let out_dir = kdev::out::example_output_dir("shapes")?;`
+    - `io::write_ppm(&surface, out_dir.join("shapes.ppm"))?;`
