@@ -8,3 +8,5 @@ kmath = { path = "../kmath" }
 kpix = { path = "../kpix" }
 kimgfmt = { path = "../kimgfmt" }
 
+[dev-dependencies]
+kdev = { path = "../kdev" }

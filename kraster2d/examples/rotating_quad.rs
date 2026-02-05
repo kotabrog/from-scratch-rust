@@ -1,10 +1,9 @@
+use kdev::out;
 use kmath::{Transform2D, Vec2, Vec3};
 use kpix::Color;
 use kraster2d::core::texture::Texture;
 use kraster2d::raster::{Vertex, draw_triangle_textured};
 use kraster2d::{Frame, io};
-use std::path::Path;
-use std::{env, fs};
 
 fn make_checker_tex(w: usize, h: usize, cell: usize) -> Texture {
     let mut px = Vec::with_capacity(w * h);
@@ -28,10 +27,9 @@ fn main() {
     let tex = make_checker_tex(64, 64, 8);
     let center = Vec2::new(128.0, 128.0);
 
-    // Resolve output directory: <CARGO_TARGET_DIR|target>/examples/rotating_quad
-    let base = env::var("CARGO_TARGET_DIR").unwrap_or_else(|_| "target".to_string());
-    let out_dir = Path::new(&base).join("examples").join("rotating_quad");
-    fs::create_dir_all(&out_dir).expect("failed to create output directory");
+    // Resolve output directory via kdev helper
+    let out_dir =
+        out::example_output_dir("rotating_quad").expect("failed to create output directory");
 
     // Quad centered at (128,128)
     let half = 60.0;

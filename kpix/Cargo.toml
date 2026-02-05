@@ -7,3 +7,6 @@ edition = "2024"
 
 # Delegate image saving to kimgfmt
 kimgfmt = { path = "../kimgfmt" }
+
+[dev-dependencies]
+kdev = { path = "../kdev" }

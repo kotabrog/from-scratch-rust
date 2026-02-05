@@ -1,3 +1,4 @@
+use kdev::out;
 use kpix::{Color, Surface, io};
 
 fn main() {
@@ -51,6 +52,7 @@ fn main() {
         kpix::draw::draw_circle(&mut s, cx, cy, i, col);
     }
 
-    io::write_ppm(&s, "shapes.ppm").expect("failed to write PPM");
-    io::write_bmp(&s, "shapes.bmp").expect("failed to write BMP");
+    let out_dir = out::example_output_dir("shapes").expect("failed to create output directory");
+    io::write_ppm(&s, out_dir.join("shapes.ppm")).expect("failed to write PPM");
+    io::write_bmp(&s, out_dir.join("shapes.bmp")).expect("failed to write BMP");
 }

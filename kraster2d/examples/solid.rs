@@ -1,3 +1,4 @@
+use kdev::out;
 use kpix::Color;
 use kraster2d::{Frame, io};
 
@@ -12,5 +13,7 @@ fn main() {
         frame.set_pixel(255 - i, i, white);
     }
 
-    io::write::write_ppm(&frame, "frame0000.ppm").expect("failed to write PPM");
+    let out_dir = out::example_output_dir("solid").expect("failed to create output directory");
+    let path = out_dir.join("frame0000.ppm");
+    io::write::write_ppm(&frame, path).expect("failed to write PPM");
 }

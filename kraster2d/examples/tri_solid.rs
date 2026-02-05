@@ -1,3 +1,4 @@
+use kdev::out;
 use kmath::Vec3;
 use kpix::Color;
 use kraster2d::{
@@ -15,5 +16,7 @@ fn main() {
     let v2 = Vertex::new(Vec3::new(60.0, 200.0, 0.0));
     draw_triangle_solid(&mut frame, v0, v1, v2, red);
 
-    kraster2d::io::write::write_ppm(&frame, "tri_solid.ppm").expect("failed to write PPM");
+    let out_dir = out::example_output_dir("tri_solid").expect("failed to create output directory");
+    let path = out_dir.join("tri_solid.ppm");
+    kraster2d::io::write::write_ppm(&frame, path).expect("failed to write PPM");
 }
