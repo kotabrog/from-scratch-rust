@@ -219,6 +219,6 @@ mod tests {
         draw_triangle_textured(&mut f, v0, v1, v2, &tex);
         // Find at least one filled pixel and assert it's red
         let red = Color::rgba(255, 0, 0, 255).to_u32();
-        assert!(f.pixels().iter().any(|&px| px == red));
+        assert!(f.pixels().contains(&red));
     }
 }
