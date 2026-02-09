@@ -3,6 +3,10 @@
 version = 4
 
 [[package]]
+name = "kdev"
+version = "0.1.0"
+
+[[package]]
 name = "kid"
 version = "0.1.0"
 
@@ -18,9 +22,20 @@ version = "0.1.0"
 name = "kpix"
 version = "0.1.0"
 dependencies = [
+ "kdev",
  "kimgfmt",
 ]
 
 [[package]]
 name = "krand"
 version = "0.1.0"
+
+[[package]]
+name = "kraster2d"
+version = "0.1.0"
+dependencies = [
+ "kdev",
+ "kimgfmt",
+ "kmath",
+ "kpix",
+]

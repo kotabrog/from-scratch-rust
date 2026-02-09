@@ -19,7 +19,7 @@
 ## サンプル
 
 ### グラデーション
-- 実行: `cargo run -p kpix --example gradient -- gradient.ppm`
+- 実行: `cargo run -p kpix --example gradient`
 - 出力: 256x256 のグラデーション画像（`gradient.ppm` と `gradient.bmp` を出力）
 
 ### 図形（線・矩形・円）
