@@ -3,6 +3,7 @@ use std::time::Duration;
 use kdev::out;
 use kloop::{App, FixedLoop, LoopConfig};
 use kpix::{Color, Surface};
+use std::process::Command;
 
 struct BallDemo {
     // physics state (curr/prev)
@@ -103,5 +104,40 @@ fn main() {
         app.draw(&mut surface, 0.0);
         let path = out_dir.join(format!("frame_{:06}.ppm", i));
         kpix::io::write_ppm(&surface, path).expect("write ppm");
+    }
+
+    // Optional: create a video from frames using ffmpeg when --video is passed.
+    let make_video = std::env::args().any(|a| a == "--video");
+    if make_video {
+        println!(
+            "Encoding out.mp4 via ffmpeg in {:?} (60 fps)",
+            out_dir
+        );
+        let status = Command::new("ffmpeg")
+            .args([
+                "-y",
+                "-framerate",
+                "60",
+                "-i",
+                "frame_%06d.ppm",
+                "-c:v",
+                "libx264",
+                "-pix_fmt",
+                "yuv420p",
+                "out.mp4",
+            ])
+            .current_dir(&out_dir)
+            .status();
+        match status {
+            Ok(s) if s.success() => {
+                println!("Created {:?}/out.mp4", out_dir);
+            }
+            Ok(s) => {
+                eprintln!("ffmpeg exited with status: {:?}", s.code());
+            }
+            Err(e) => {
+                eprintln!("Failed to run ffmpeg: {}", e);
+            }
+        }
     }
 }
