@@ -1,0 +1,12 @@
+[package]
+name = "kloop"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+ktime = { path = "../ktime" }
+
+[dev-dependencies]
+kpix = { path = "../kpix" }
+kdev = { path = "../kdev" }
+

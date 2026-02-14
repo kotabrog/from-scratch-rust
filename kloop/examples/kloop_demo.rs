@@ -1,0 +1,107 @@
+use std::time::Duration;
+
+use kdev::out;
+use kloop::{App, FixedLoop, LoopConfig};
+use kpix::{Color, Surface};
+
+struct BallDemo {
+    // physics state (curr/prev)
+    px: f32,
+    py: f32,
+    vx: f32,
+    vy: f32,
+    prev_px: f32,
+    prev_py: f32,
+    w: usize,
+    h: usize,
+}
+
+impl BallDemo {
+    fn new(w: usize, h: usize) -> Self {
+        Self {
+            px: 40.0,
+            py: 40.0,
+            vx: 60.0,
+            vy: 85.0,
+            prev_px: 40.0,
+            prev_py: 40.0,
+            w,
+            h,
+        }
+    }
+
+    fn draw(&self, s: &mut Surface, alpha: f32) {
+        // background
+        s.clear(Color::rgba(20, 30, 50, 255));
+        // interpolate position for rendering
+        let x = self.prev_px + (self.px - self.prev_px) * alpha;
+        let y = self.prev_py + (self.py - self.prev_py) * alpha;
+        // simple filled circle (approx) using set_pixel
+        let cx = x as i32;
+        let cy = y as i32;
+        let r = 8i32;
+        for dy in -r..=r {
+            for dx in -r..=r {
+                if dx * dx + dy * dy <= r * r {
+                    s.set_pixel(cx + dx, cy + dy, Color::rgba(230, 180, 40, 255));
+                }
+            }
+        }
+    }
+}
+
+impl App for BallDemo {
+    fn update(&mut self, dt: Duration) {
+        // save previous state for interpolation
+        self.prev_px = self.px;
+        self.prev_py = self.py;
+        let dt_s = dt.as_secs_f32();
+        self.px += self.vx * dt_s;
+        self.py += self.vy * dt_s;
+        // bounce on walls
+        if self.px < 8.0 {
+            self.px = 8.0;
+            self.vx = self.vx.abs();
+        }
+        if self.py < 8.0 {
+            self.py = 8.0;
+            self.vy = self.vy.abs();
+        }
+        if self.px > (self.w as f32 - 8.0) {
+            self.px = self.w as f32 - 8.0;
+            self.vx = -self.vx.abs();
+        }
+        if self.py > (self.h as f32 - 8.0) {
+            self.py = self.h as f32 - 8.0;
+            self.vy = -self.vy.abs();
+        }
+    }
+
+    fn render(&mut self, _alpha: f32) {
+        // handled explicitly in main to write PPM each frame
+    }
+}
+
+fn main() {
+    let (w, h) = (256usize, 256usize);
+    let mut surface = Surface::new(w, h);
+
+    let mut app = BallDemo::new(w, h);
+    let clock = ktime::FakeClock::default();
+    // generous limits during recording
+    let cfg = LoopConfig::from_hz(60).with_limits(Duration::from_millis(250), 1000);
+    let mut looper = FixedLoop::new(clock, cfg);
+
+    let out_dir = out::example_output_dir("kloop_demo").expect("create out dir");
+
+    // Produce 120 frames (2 seconds at 60fps) in headless manner:
+    for i in 0..120u32 {
+        // advance fake clock by fixed_dt and tick once (update+alpha calc)
+        // here we use run_steps to drive logic deterministically
+        looper.run_steps(&mut app, 1);
+        // Since run_steps doesn't call render, synthesize alpha=0 and draw now
+        app.draw(&mut surface, 0.0);
+        let path = out_dir.join(format!("frame_{:06}.ppm", i));
+        kpix::io::write_ppm(&surface, path).expect("write ppm");
+    }
+}
