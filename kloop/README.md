@@ -11,11 +11,16 @@
 
 ## サンプル
 
-### 例: `kloop_demo`
-- 実行（フレーム出力のみ）:
-  - `cargo run -p kloop --example kloop_demo`
-- 実行（連番PPMから動画も生成、ffmpeg 必須）:
-  - `cargo run -p kloop --example kloop_demo -- --video`
+### デモ
+- 実行: `cargo run -p kloop --example kloop_demo -- [options]`
 - 出力先: `target/examples/kloop_demo/`
   - 連番: `frame_000000.ppm` ～
-  - 動画: `out.mp4`（コマンドは `ffmpeg -framerate 60 -i frame_%06d.ppm -c:v libx264 -pix_fmt yuv420p out.mp4`）
+  - 動画: `out.mp4`
+
+オプション
+- `--realtime <seconds>`: 実時間で指定秒数だけ進行し、各フレームを保存します（約60fps）。
+- `--video`: 生成した連番PPMから `ffmpeg` で `out.mp4` を作成します。
+  - 使用コマンド: `ffmpeg -framerate 60 -i frame_%06d.ppm -c:v libx264 -pix_fmt yuv420p out.mp4`
+
+補足
+- 既定動作はフェイク時間で2秒（120フレーム@60fps）のみ生成します。

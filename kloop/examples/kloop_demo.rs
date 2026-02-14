@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use kdev::out;
 use kloop::{App, FixedLoop, LoopConfig};
@@ -84,30 +84,75 @@ impl App for BallDemo {
 }
 
 fn main() {
+    // Option parsing: --video to encode MP4, --realtime <seconds> to run with real time
+    let mut make_video = false;
+    let mut realtime_secs: Option<f64> = None;
+    let mut args = std::env::args().skip(1).peekable();
+    while let Some(a) = args.next() {
+        if a == "--video" {
+            make_video = true;
+        } else if a == "--realtime" {
+            if let Some(s) = args.next() {
+                match s.parse::<f64>() {
+                    Ok(v) if v > 0.0 => realtime_secs = Some(v),
+                    _ => {
+                        eprintln!("--realtime の秒数は正の数で指定してください（例: --realtime 2.0）");
+                        return;
+                    }
+                }
+            } else {
+                eprintln!("--realtime の後に秒数を指定してください（例: --realtime 2.0）");
+                return;
+            }
+        }
+    }
+
     let (w, h) = (256usize, 256usize);
     let mut surface = Surface::new(w, h);
 
     let mut app = BallDemo::new(w, h);
-    let clock = ktime::FakeClock::default();
-    // generous limits during recording
-    let cfg = LoopConfig::from_hz(60).with_limits(Duration::from_millis(250), 1000);
-    let mut looper = FixedLoop::new(clock, cfg);
-
     let out_dir = out::example_output_dir("kloop_demo").expect("create out dir");
 
-    // Produce 120 frames (2 seconds at 60fps) in headless manner:
-    for i in 0..120u32 {
-        // advance fake clock by fixed_dt and tick once (update+alpha calc)
-        // here we use run_steps to drive logic deterministically
-        looper.run_steps(&mut app, 1);
-        // Since run_steps doesn't call render, synthesize alpha=0 and draw now
-        app.draw(&mut surface, 0.0);
-        let path = out_dir.join(format!("frame_{:06}.ppm", i));
-        kpix::io::write_ppm(&surface, path).expect("write ppm");
+    if let Some(secs) = realtime_secs {
+        // Real-time mode: use SystemClock and tick until specified seconds elapse.
+        let cfg = LoopConfig::from_hz(60).with_limits(Duration::from_millis(250), 1000);
+        let mut looper = FixedLoop::new(ktime::SystemClock, cfg);
+
+        let start = Instant::now();
+        let target_frame = Duration::from_secs_f64(1.0 / 60.0);
+        let mut last_frame = Instant::now();
+        let mut i = 0u32;
+        while start.elapsed().as_secs_f64() < secs {
+            let res = looper.tick(&mut app);
+            app.draw(&mut surface, res.alpha);
+            let path = out_dir.join(format!("frame_{:06}.ppm", i));
+            kpix::io::write_ppm(&surface, path).expect("write ppm");
+            i += 1;
+
+            // Pace roughly to 60 FPS
+            let elapsed = last_frame.elapsed();
+            if elapsed < target_frame {
+                std::thread::sleep(target_frame - elapsed);
+            }
+            last_frame = Instant::now();
+        }
+    } else {
+        // Default: headless deterministic capture using FakeClock for exactly 120 frames (2 seconds @ 60fps)
+        let clock = ktime::FakeClock::default();
+        let cfg = LoopConfig::from_hz(60).with_limits(Duration::from_millis(250), 1000);
+        let mut looper = FixedLoop::new(clock, cfg);
+
+        for i in 0..120u32 {
+            // Advance by one fixed step deterministically
+            looper.run_steps(&mut app, 1);
+            // Since run_steps doesn't call render, synthesize alpha=0 and draw now
+            app.draw(&mut surface, 0.0);
+            let path = out_dir.join(format!("frame_{:06}.ppm", i));
+            kpix::io::write_ppm(&surface, path).expect("write ppm");
+        }
     }
 
     // Optional: create a video from frames using ffmpeg when --video is passed.
-    let make_video = std::env::args().any(|a| a == "--video");
     if make_video {
         println!(
             "Encoding out.mp4 via ffmpeg in {:?} (60 fps)",
