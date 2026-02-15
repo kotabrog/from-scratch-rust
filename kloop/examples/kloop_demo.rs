@@ -15,6 +15,7 @@ struct BallDemo {
     prev_py: f32,
     w: usize,
     h: usize,
+    surface: Surface,
 }
 
 impl BallDemo {
@@ -28,26 +29,12 @@ impl BallDemo {
             prev_py: 40.0,
             w,
             h,
+            surface: Surface::new(w, h),
         }
     }
 
-    fn draw(&self, s: &mut Surface, alpha: f32) {
-        // background
-        s.clear(Color::rgba(20, 30, 50, 255));
-        // interpolate position for rendering
-        let x = self.prev_px + (self.px - self.prev_px) * alpha;
-        let y = self.prev_py + (self.py - self.prev_py) * alpha;
-        // simple filled circle (approx) using set_pixel
-        let cx = x as i32;
-        let cy = y as i32;
-        let r = 8i32;
-        for dy in -r..=r {
-            for dx in -r..=r {
-                if dx * dx + dy * dy <= r * r {
-                    s.set_pixel(cx + dx, cy + dy, Color::rgba(230, 180, 40, 255));
-                }
-            }
-        }
+    fn surface(&self) -> &Surface {
+        &self.surface
     }
 }
 
@@ -78,8 +65,24 @@ impl App for BallDemo {
         }
     }
 
-    fn render(&mut self, _alpha: f32) {
-        // handled explicitly in main to write PPM each frame
+    fn render(&mut self, alpha: f32) {
+        // background
+        self.surface.clear(Color::rgba(20, 30, 50, 255));
+        // interpolate position for rendering
+        let x = self.prev_px + (self.px - self.prev_px) * alpha;
+        let y = self.prev_py + (self.py - self.prev_py) * alpha;
+        // simple filled circle (approx) using set_pixel
+        let cx = x as i32;
+        let cy = y as i32;
+        let r = 8i32;
+        for dy in -r..=r {
+            for dx in -r..=r {
+                if dx * dx + dy * dy <= r * r {
+                    self.surface
+                        .set_pixel(cx + dx, cy + dy, Color::rgba(230, 180, 40, 255));
+                }
+            }
+        }
     }
 }
 
@@ -96,7 +99,9 @@ fn main() {
                 match s.parse::<f64>() {
                     Ok(v) if v > 0.0 => realtime_secs = Some(v),
                     _ => {
-                        eprintln!("--realtime の秒数は正の数で指定してください（例: --realtime 2.0）");
+                        eprintln!(
+                            "--realtime の秒数は正の数で指定してください（例: --realtime 2.0）"
+                        );
                         return;
                     }
                 }
@@ -108,7 +113,6 @@ fn main() {
     }
 
     let (w, h) = (256usize, 256usize);
-    let mut surface = Surface::new(w, h);
 
     let mut app = BallDemo::new(w, h);
     let out_dir = out::example_output_dir("kloop_demo").expect("create out dir");
@@ -123,10 +127,10 @@ fn main() {
         let mut last_frame = Instant::now();
         let mut i = 0u32;
         while start.elapsed().as_secs_f64() < secs {
-            let res = looper.tick(&mut app);
-            app.draw(&mut surface, res.alpha);
+            let _res = looper.tick(&mut app);
+            // render() is called by tick; just save the current surface
             let path = out_dir.join(format!("frame_{:06}.ppm", i));
-            kpix::io::write_ppm(&surface, path).expect("write ppm");
+            kpix::io::write_ppm(app.surface(), path).expect("write ppm");
             i += 1;
 
             // Pace roughly to 60 FPS
@@ -145,19 +149,16 @@ fn main() {
         for i in 0..120u32 {
             // Advance by one fixed step deterministically
             looper.run_steps(&mut app, 1);
-            // Since run_steps doesn't call render, synthesize alpha=0 and draw now
-            app.draw(&mut surface, 0.0);
+            // Since run_steps doesn't call render, invoke render with alpha=0.0
+            app.render(0.0);
             let path = out_dir.join(format!("frame_{:06}.ppm", i));
-            kpix::io::write_ppm(&surface, path).expect("write ppm");
+            kpix::io::write_ppm(app.surface(), path).expect("write ppm");
         }
     }
 
     // Optional: create a video from frames using ffmpeg when --video is passed.
     if make_video {
-        println!(
-            "Encoding out.mp4 via ffmpeg in {:?} (60 fps)",
-            out_dir
-        );
+        println!("Encoding out.mp4 via ffmpeg in {:?} (60 fps)", out_dir);
         let status = Command::new("ffmpeg")
             .args([
                 "-y",
