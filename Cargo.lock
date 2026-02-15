@@ -15,6 +15,15 @@ name = "kimgfmt"
 version = "0.1.0"
 
 [[package]]
+name = "kloop"
+version = "0.1.0"
+dependencies = [
+ "kdev",
+ "kpix",
+ "ktime",
+]
+
+[[package]]
 name = "kmath"
 version = "0.1.0"
 
@@ -38,4 +47,11 @@ dependencies = [
  "kimgfmt",
  "kmath",
  "kpix",
+]
+
+[[package]]
+name = "ktime"
+version = "0.1.0"
+dependencies = [
+ "kmath",
 ]
