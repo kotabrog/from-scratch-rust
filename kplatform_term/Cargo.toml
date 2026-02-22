@@ -1,0 +1,11 @@
+[package]
+name = "kplatform_term"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+kplatform_core = { path = "../kplatform_core" }
+
+[dev-dependencies]
+kpix = { path = "../kpix" }
+
