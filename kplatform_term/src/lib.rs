@@ -43,6 +43,9 @@ const TCSANOW: c_int = 0;
 const F_GETFL: c_int = 3;
 const F_SETFL: c_int = 4;
 const O_NONBLOCK: c_int = 0x800; // Linux
+const ESC: u8 = 0x1b;
+const BACKSPACE_DEL: u8 = 0x7f;
+const BACKSPACE_BS: u8 = 0x08;
 
 impl TermGuard {
     fn emit_enter(mut w: impl Write) -> io::Result<()> {
@@ -119,6 +122,14 @@ pub struct TermPlatform {
     _guard: TermGuard,
     input_buf: Vec<u8>,
 }
+
+#[derive(Clone, Debug, PartialEq)]
+enum ParseResult {
+    Event(Event, usize),
+    Incomplete,
+    Unknown(usize),
+}
+
 impl TermPlatform {
     pub fn new(config: &WindowConfig) -> Result<Self, PlatformError> {
         let size = (config.width, config.height);
@@ -227,29 +238,72 @@ impl TermPlatform {
             }
         }
     }
-    fn parse_event(buf: &[u8]) -> Option<(Event, usize)> {
-        if buf.is_empty() {
-            return None;
+
+    fn parse_ascii_key(byte: u8) -> ParseResult {
+        match byte {
+            b'\r' | b'\n' => ParseResult::Event(Event::KeyDown(kplatform_core::Key::Enter), 1),
+            BACKSPACE_DEL | BACKSPACE_BS => {
+                ParseResult::Event(Event::KeyDown(kplatform_core::Key::Backspace), 1)
+            }
+            b @ 0x20..=0x7e => {
+                ParseResult::Event(Event::KeyDown(kplatform_core::Key::Char(b as char)), 1)
+            }
+            _ => ParseResult::Unknown(1),
         }
-        let b0 = buf[0];
-        match b0 {
-            0x1b => {
-                if buf.len() >= 3 && buf[1] == b'[' {
-                    match buf[2] {
-                        b'A' => Some((Event::KeyDown(kplatform_core::Key::Up), 3)),
-                        b'B' => Some((Event::KeyDown(kplatform_core::Key::Down), 3)),
-                        b'C' => Some((Event::KeyDown(kplatform_core::Key::Right), 3)),
-                        b'D' => Some((Event::KeyDown(kplatform_core::Key::Left), 3)),
-                        _ => None,
-                    }
-                } else {
-                    Some((Event::KeyDown(kplatform_core::Key::Escape), 1))
+    }
+
+    fn parse_csi_sequence(buf: &[u8]) -> ParseResult {
+        if buf.len() < 3 {
+            return ParseResult::Incomplete;
+        }
+
+        match buf[2] {
+            b'A' => ParseResult::Event(Event::KeyDown(kplatform_core::Key::Up), 3),
+            b'B' => ParseResult::Event(Event::KeyDown(kplatform_core::Key::Down), 3),
+            b'C' => ParseResult::Event(Event::KeyDown(kplatform_core::Key::Right), 3),
+            b'D' => ParseResult::Event(Event::KeyDown(kplatform_core::Key::Left), 3),
+            _ => ParseResult::Unknown(1),
+        }
+    }
+
+    fn parse_escape_sequence(buf: &[u8]) -> ParseResult {
+        if buf.len() == 1 {
+            return ParseResult::Event(Event::KeyDown(kplatform_core::Key::Escape), 1);
+        }
+
+        match buf[1] {
+            b'[' => Self::parse_csi_sequence(buf),
+            _ => ParseResult::Unknown(1),
+        }
+    }
+
+    fn parse_event(buf: &[u8]) -> ParseResult {
+        if buf.is_empty() {
+            return ParseResult::Incomplete;
+        }
+
+        match buf[0] {
+            ESC => Self::parse_escape_sequence(buf),
+            byte => Self::parse_ascii_key(byte),
+        }
+    }
+
+    fn drain_next_event(input_buf: &mut Vec<u8>) -> Option<Event> {
+        loop {
+            if input_buf.is_empty() {
+                return None;
+            }
+
+            match Self::parse_event(input_buf) {
+                ParseResult::Event(event, used) => {
+                    input_buf.drain(0..used);
+                    return Some(event);
+                }
+                ParseResult::Incomplete => return None,
+                ParseResult::Unknown(used) => {
+                    input_buf.drain(0..used);
                 }
             }
-            b'\r' | b'\n' => Some((Event::KeyDown(kplatform_core::Key::Enter), 1)),
-            0x7f | 0x08 => Some((Event::KeyDown(kplatform_core::Key::Backspace), 1)),
-            b @ 0x20..=0x7e => Some((Event::KeyDown(kplatform_core::Key::Char(b as char)), 1)),
-            _ => None,
         }
     }
 }
@@ -275,11 +329,7 @@ impl Platform for TermPlatform {
         if self.input_buf.is_empty() {
             return None;
         }
-        if let Some((ev, used)) = Self::parse_event(&self.input_buf) {
-            self.input_buf.drain(0..used);
-            return Some(ev);
-        }
-        None
+        Self::drain_next_event(&mut self.input_buf)
     }
 
     fn present_rgba_le(
@@ -351,26 +401,67 @@ mod tests {
     #[test]
     fn parse_basic_keys() {
         use kplatform_core::Key;
-        let e = TermPlatform::parse_event(b"a").unwrap();
-        assert!(matches!(e.0, Event::KeyDown(Key::Char('a'))));
-        let e = TermPlatform::parse_event(b"\n").unwrap();
-        assert!(matches!(e.0, Event::KeyDown(Key::Enter)));
-        let e = TermPlatform::parse_event(b"\x7f").unwrap();
-        assert!(matches!(e.0, Event::KeyDown(Key::Backspace)));
+        let e = TermPlatform::parse_event(b"a");
+        assert_eq!(e, ParseResult::Event(Event::KeyDown(Key::Char('a')), 1));
+        let e = TermPlatform::parse_event(b"\n");
+        assert_eq!(e, ParseResult::Event(Event::KeyDown(Key::Enter), 1));
+        let e = TermPlatform::parse_event(&[BACKSPACE_DEL]);
+        assert_eq!(e, ParseResult::Event(Event::KeyDown(Key::Backspace), 1));
     }
 
     #[test]
     fn parse_arrows_and_escape() {
         use kplatform_core::Key;
-        let e = TermPlatform::parse_event(b"\x1b[A").unwrap();
-        assert!(matches!(e.0, Event::KeyDown(Key::Up)));
-        let e = TermPlatform::parse_event(b"\x1b[B").unwrap();
-        assert!(matches!(e.0, Event::KeyDown(Key::Down)));
-        let e = TermPlatform::parse_event(b"\x1b[C").unwrap();
-        assert!(matches!(e.0, Event::KeyDown(Key::Right)));
-        let e = TermPlatform::parse_event(b"\x1b[D").unwrap();
-        assert!(matches!(e.0, Event::KeyDown(Key::Left)));
-        let e = TermPlatform::parse_event(b"\x1b").unwrap();
-        assert!(matches!(e.0, Event::KeyDown(Key::Escape)));
+        let e = TermPlatform::parse_event(&[ESC, b'[', b'A']);
+        assert_eq!(e, ParseResult::Event(Event::KeyDown(Key::Up), 3));
+        let e = TermPlatform::parse_event(&[ESC, b'[', b'B']);
+        assert_eq!(e, ParseResult::Event(Event::KeyDown(Key::Down), 3));
+        let e = TermPlatform::parse_event(&[ESC, b'[', b'C']);
+        assert_eq!(e, ParseResult::Event(Event::KeyDown(Key::Right), 3));
+        let e = TermPlatform::parse_event(&[ESC, b'[', b'D']);
+        assert_eq!(e, ParseResult::Event(Event::KeyDown(Key::Left), 3));
+        let e = TermPlatform::parse_event(&[ESC]);
+        assert_eq!(e, ParseResult::Event(Event::KeyDown(Key::Escape), 1));
+    }
+
+    #[test]
+    fn parse_incomplete_escape_sequence() {
+        assert_eq!(
+            TermPlatform::parse_event(&[ESC, b'[']),
+            ParseResult::Incomplete
+        );
+    }
+
+    #[test]
+    fn parse_unknown_bytes() {
+        assert_eq!(TermPlatform::parse_event(b"\x01"), ParseResult::Unknown(1));
+        assert_eq!(
+            TermPlatform::parse_event(&[ESC, b'[', b'Z']),
+            ParseResult::Unknown(1)
+        );
+    }
+
+    #[test]
+    fn drain_next_event_skips_unknown_leading_bytes() {
+        let mut input = vec![0x01, b'a'];
+        let event = TermPlatform::drain_next_event(&mut input);
+        assert_eq!(event, Some(Event::KeyDown(kplatform_core::Key::Char('a'))));
+        assert!(input.is_empty());
+    }
+
+    #[test]
+    fn drain_next_event_preserves_incomplete_sequence() {
+        let mut input = vec![ESC, b'['];
+        let event = TermPlatform::drain_next_event(&mut input);
+        assert_eq!(event, None);
+        assert_eq!(input, vec![ESC, b'[']);
+    }
+
+    #[test]
+    fn drain_next_event_returns_first_event_from_concatenated_input() {
+        let mut input = vec![ESC, b'[', b'A', b'a'];
+        let event = TermPlatform::drain_next_event(&mut input);
+        assert_eq!(event, Some(Event::KeyDown(kplatform_core::Key::Up)));
+        assert_eq!(input, b"a");
     }
 }
