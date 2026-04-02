@@ -5,9 +5,9 @@ use kplatform_core::{Platform, WindowConfig};
 use kplatform_term::TermPlatform;
 
 fn main() {
-    let (w, h) = (80u32, 24u32);
-    let cfg = WindowConfig::new("term-gradient", w, h);
+    let cfg = WindowConfig::new("term-gradient", 80, 24);
     let mut plat = TermPlatform::new(&cfg).expect("term platform");
+    let (w, h) = plat.size();
 
     // Optional seconds arg: --seconds <f32>
     let mut frames: u32 = 120;
@@ -19,6 +19,7 @@ fn main() {
         let per = 33f32 / 1000.0;
         frames = ((sec / per).max(1.0)) as u32;
     }
+
     let mut surf = Surface::new(w as usize, h as usize);
     for frame in 0..frames {
         // Simple animated gradient

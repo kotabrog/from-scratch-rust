@@ -31,21 +31,34 @@ struct Termios {
 
 #[allow(non_camel_case_types)]
 type c_int = i32;
+#[allow(non_camel_case_types)]
+type c_ulong = u64;
 
 unsafe extern "C" {
     fn tcgetattr(fd: c_int, termios_p: *mut Termios) -> c_int;
     fn tcsetattr(fd: c_int, optional_actions: c_int, termios_p: *const Termios) -> c_int;
     fn cfmakeraw(termios_p: *mut Termios);
     fn fcntl(fd: c_int, cmd: c_int, ...) -> c_int;
+    fn ioctl(fd: c_int, request: c_ulong, ...) -> c_int;
 }
 
 const TCSANOW: c_int = 0;
 const F_GETFL: c_int = 3;
 const F_SETFL: c_int = 4;
 const O_NONBLOCK: c_int = 0x800; // Linux
+const TIOCGWINSZ: c_ulong = 0x5413; // Linux
 const ESC: u8 = 0x1b;
 const BACKSPACE_DEL: u8 = 0x7f;
 const BACKSPACE_BS: u8 = 0x08;
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, Default)]
+struct WinSize {
+    ws_row: u16,
+    ws_col: u16,
+    ws_xpixel: u16,
+    ws_ypixel: u16,
+}
 
 impl TermGuard {
     fn emit_enter(mut w: impl Write) -> io::Result<()> {
@@ -132,7 +145,7 @@ enum ParseResult {
 
 impl TermPlatform {
     pub fn new(config: &WindowConfig) -> Result<Self, PlatformError> {
-        let size = (config.width, config.height);
+        let size = Self::resolve_size(config.width, config.height);
         let guard = TermGuard::install().map_err(PlatformError::Io)?;
         Ok(Self {
             size,
@@ -204,6 +217,20 @@ impl TermPlatform {
         }
         Self::robust_write_all(&mut w, &out)?;
         Self::robust_flush(&mut w)
+    }
+
+    fn terminal_size() -> Option<(u32, u32)> {
+        let fd: c_int = 1;
+        let mut ws = WinSize::default();
+        let rc = unsafe { ioctl(fd, TIOCGWINSZ, &mut ws as *mut WinSize) };
+        if rc != 0 || ws.ws_col == 0 || ws.ws_row == 0 {
+            return None;
+        }
+        Some((u32::from(ws.ws_col), u32::from(ws.ws_row)))
+    }
+
+    fn resolve_size(fallback_width: u32, fallback_height: u32) -> (u32, u32) {
+        Self::terminal_size().unwrap_or((fallback_width, fallback_height))
     }
 }
 
@@ -463,5 +490,12 @@ mod tests {
         let event = TermPlatform::drain_next_event(&mut input);
         assert_eq!(event, Some(Event::KeyDown(kplatform_core::Key::Up)));
         assert_eq!(input, b"a");
+    }
+
+    #[test]
+    fn resolve_size_falls_back_when_terminal_size_unavailable() {
+        let (w, h) = TermPlatform::resolve_size(80, 24);
+        assert!(w > 0);
+        assert!(h > 0);
     }
 }
