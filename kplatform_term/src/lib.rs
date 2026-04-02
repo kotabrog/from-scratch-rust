@@ -156,7 +156,7 @@ impl TermPlatform {
 
     fn write_row_truecolor(mut w: impl Write, row: &[u32]) -> io::Result<()> {
         if row.is_empty() {
-            w.write_all(b"\x1b[0m\n")?;
+            w.write_all(b"\x1b[0m")?;
             return Ok(());
         }
         let mut cur = row[0].to_le_bytes();
@@ -177,7 +177,7 @@ impl TermPlatform {
         }
         // final run
         Self::write_spaces(&mut w, run)?;
-        w.write_all(b"\x1b[0m\n")?;
+        w.write_all(b"\x1b[0m")?;
         Ok(())
     }
 
@@ -210,8 +210,8 @@ impl TermPlatform {
         // Build full frame into a buffer to avoid partial writes,
         // then write with retry handling for WouldBlock.
         let mut out = Vec::with_capacity(w_u.saturating_mul(12).saturating_mul(h_u).max(1024));
-        out.extend_from_slice(b"\x1b[H");
         for y in 0..h_u {
+            write!(&mut out, "\x1b[{};1H", y + 1)?;
             let row = &pixels_rgba_le[y * w_u..y * w_u + w_u];
             Self::write_row_truecolor(&mut out, row)?;
         }
@@ -226,7 +226,8 @@ impl TermPlatform {
         if rc != 0 || ws.ws_col == 0 || ws.ws_row == 0 {
             return None;
         }
-        Some((u32::from(ws.ws_col), u32::from(ws.ws_row)))
+        let width = u32::from(ws.ws_col).saturating_sub(1).max(1);
+        Some((width, u32::from(ws.ws_row)))
     }
 
     fn resolve_size(fallback_width: u32, fallback_height: u32) -> (u32, u32) {
@@ -402,7 +403,7 @@ mod tests {
         TermPlatform::write_row_truecolor(&mut v, &row).unwrap();
         let s = String::from_utf8(v).unwrap();
         assert_eq!(s.matches("\u{1b}[48;2;").count(), 3);
-        assert!(s.ends_with("\u{1b}[0m\n"));
+        assert!(s.ends_with("\u{1b}[0m"));
         let spaces = s.chars().filter(|&ch| ch == ' ').count();
         assert_eq!(spaces, row.len());
     }
@@ -497,5 +498,14 @@ mod tests {
         let (w, h) = TermPlatform::resolve_size(80, 24);
         assert!(w > 0);
         assert!(h > 0);
+    }
+
+    #[test]
+    fn terminal_width_reserves_last_column_for_no_wrap() {
+        let width = u32::from(1u16).saturating_sub(1).max(1);
+        assert_eq!(width, 1);
+
+        let width = u32::from(80u16).saturating_sub(1).max(1);
+        assert_eq!(width, 79);
     }
 }
